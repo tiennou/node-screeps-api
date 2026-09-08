@@ -238,4 +238,36 @@ describe('api.raw.user', function () {
       assert.equal('error' in res ? res.error : undefined, 'code length exceeds 5 MB limit', 'incorrect server response')
     })
   })
+
+  describe('.userEmail(email)', function () {
+    it('should return { error: \'invalid email\' } if the address is malformed', async function () {
+      const api = await createAuthedClient()
+      const res = await api.userEmail('not-an-email')
+      assert.equal('error' in res ? res.error : undefined, 'invalid email', 'incorrect server response')
+    })
+
+    it('should return { error: \'email already exists\' } if the address is already in use', async function () {
+      const api = await createAuthedClient()
+      const me = await api.authMe()
+      if (!me.email) {
+        this.skip()
+      }
+      const res = await api.userEmail(me.email)
+      assert.equal('error' in res ? res.error : undefined, 'email already exists', 'incorrect server response')
+    })
+  })
+
+  describe('.userMessagesSend(respondent, text)', function () {
+    it('should return { error: \'invalid respondent\' } if the user id does not exist', async function () {
+      const api = await createAuthedClient()
+      const res = await api.userMessagesSend('000000000000000000000000', 'hi')
+      assert.equal('error' in res ? res.error : undefined, 'invalid respondent', 'incorrect server response')
+    })
+
+    it('should return { error: \'text too long\' } if the message exceeds 100 KiB', async function () {
+      const api = await createAuthedClient()
+      const res = await api.userMessagesSend('000000000000000000000000', 'x'.repeat(100 * 1024 + 1))
+      assert.equal('error' in res ? res.error : undefined, 'text too long', 'incorrect server response')
+    })
+  })
 })

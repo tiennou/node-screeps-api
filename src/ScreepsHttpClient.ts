@@ -509,12 +509,12 @@ export class ScreepsHttpClient extends EventEmitter {
   /**
    * Endpoint: `POST /api/register/set-username`
    * @param username The username to associate with this account
-   * @returns Please consider submitting a PR to document the success response.
+   * @returns a {@link Http.ScreepsDbUpdateResponse} on success.
    *  If used for an account that is already set up, returns
    *  {@link Http.ScreepsErrorResponse} (`{ error: 'username already set' }`).
    * @category Endpoints: /register
    */
-  registerSetUsername(username: string): Promise<Http.ScreepsUnknownResponse | Http.ScreepsErrorResponse> {
+  registerSetUsername(username: string): Promise<Http.ScreepsDbUpdateResponse | Http.ScreepsErrorResponse> {
     return this.req(ScreepsHttpMethods.Post, '/api/register/set-username', { username })
   }
 
@@ -534,7 +534,7 @@ export class ScreepsHttpClient extends EventEmitter {
     email: string,
     password: string,
     modules?: UserCodeModules
-  ): Promise<Http.ScreepsUnknownResponse> {
+  ): Promise<Http.ScreepsResponse> {
     return this.req(ScreepsHttpMethods.Post, '/api/register/submit', { username, email, password, modules })
   }
 
@@ -1440,9 +1440,15 @@ export class ScreepsHttpClient extends EventEmitter {
    *
    * Endpoint: `POST /api/user/email`
    * @param email The user's new email address
+   * @returns a {@link Http.ScreepsDbUpdateResponse} on success, or an
+   *  {@link Http.ScreepsErrorResponse}:
+   *  `{ error: 'invalid email' }` if `email` does not match the server's
+   *  address format, or
+   *  `{ error: 'email already exists' }` if that address is already in use
+   *  (including the authenticated user's current address).
    * @category Endpoints: /user
    */
-  userEmail(email: string): Promise<Http.ScreepsUnknownResponse> {
+  userEmail(email: string): Promise<Http.ScreepsDbUpdateResponse | Http.ScreepsErrorResponse> {
     return this.req(ScreepsHttpMethods.Post, '/api/user/email', { email })
   }
 
@@ -1757,9 +1763,15 @@ export class ScreepsHttpClient extends EventEmitter {
    * Endpoint: `POST /api/user/messages/send`
    * @param respondent The long `_id` of the user, not the username
    * @param text The text of the message to send
+   * @returns a {@link Http.ScreepsResponse} on success, or an
+   *  {@link Http.ScreepsErrorResponse}:
+   *  `{ error: 'text too long' }` if `text` is not a string or is longer
+   *  than 100 KiB, or
+   *  `{ error: 'invalid respondent' }` if `respondent` is not an existing
+   *  user `_id`.
    * @category Endpoints: /user/messages
    */
-  userMessagesSend(respondent: string, text: string): Promise<Http.ScreepsUnknownResponse> {
+  userMessagesSend(respondent: string, text: string): Promise<Http.ScreepsResponse | Http.ScreepsErrorResponse> {
     return this.req(ScreepsHttpMethods.Post, '/api/user/messages/send', { respondent, text })
   }
 
