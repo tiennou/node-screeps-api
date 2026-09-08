@@ -1921,7 +1921,7 @@ export class ScreepsHttpClient extends EventEmitter {
    *  the criteria used to assign conflict levels
    * @category Endpoints: /warpath
    */
-  warpathBattles(interval = 100): Promise<Http.ScreepsUnknownResponse> {
+  warpathBattles(interval = 100): Promise<Http.WarpathBattlesResponse> {
     return this.req(ScreepsHttpMethods.Get, '/api/warpath/battles', { interval })
   }
 
