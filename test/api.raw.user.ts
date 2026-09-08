@@ -191,6 +191,18 @@ describe('api.raw.user', function () {
     })
   })
 
+  describe('.userRespawn()', function () {
+    it('should return { error: \'invalid status\' } if the user is not playing', async function () {
+      const api = await createAuthedClient()
+      const status = await api.userWorldStatus()
+      if (status.status !== 'empty') {
+        this.skip()
+      }
+      const res = await api.userRespawn()
+      assert.equal('error' in res ? res.error : undefined, 'invalid status', 'incorrect server response')
+    })
+  })
+
   describe('.userCodeSet(params)', function () {
     it('should send a POST request to /api/user/code and upload modules to the specified branch', async function () {
       const api = await createAuthedClient()

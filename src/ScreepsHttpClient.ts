@@ -624,9 +624,14 @@ export class ScreepsHttpClient extends EventEmitter {
    *  Defaults to {@link ScreepsClientConfig.defaultShard} if undefined.
    * @throws {@link node!Error | Error} if shard and {@link ScreepsClientConfig.defaultShard} are undefined
    *  while using an official server
+   * @returns a {@link Http.GamePlaceSpawnResponse} on success, or an
+   *  {@link Http.ScreepsErrorResponse}:
+   *  `{ error: 'invalid params' }` if `x`/`y` are out of range (0-49) or
+   *  `name` is longer than 50 characters, or
+   *  `{ error: 'already playing' }` if the user already has world objects.
    * @category Endpoints: /game
    */
-  gamePlaceSpawn(room: string, x: number, y: number, name?: string, shard?: string): Promise<Http.ScreepsUnknownResponse> {
+  gamePlaceSpawn(room: string, x: number, y: number, name?: string, shard?: string): Promise<Http.GamePlaceSpawnResponse | Http.ScreepsErrorResponse> {
     shard ??= this.appConfig.defaultShard
     if (this.isOfficialServer && shard === undefined) {
       throw new Error('shard must be defined')
@@ -901,6 +906,12 @@ export class ScreepsHttpClient extends EventEmitter {
    *  Defaults to {@link ScreepsClientConfig.defaultShard} if undefined.
    * @throws {@link node!Error | Error} if shard and {@link ScreepsClientConfig.defaultShard} are undefined
    *  while using an official server
+   * @returns a {@link Http.GameCreateInvaderResponse} on success, or an
+   *  {@link Http.ScreepsErrorResponse}:
+   *  `{ error: 'not owned' }` if the room is not claimed or reserved by the
+   *  authenticated user,
+   *  `{ error: 'too many invaders exist' }` if the room already has 5 invaders, or
+   *  `{ error: 'hostiles present' }` if non-invader hostile creeps are in the room.
    * @category Endpoints: /game
    */
   gameCreateInvader(
@@ -911,7 +922,7 @@ export class ScreepsHttpClient extends EventEmitter {
     type: 'Melee' | 'Ranged' | 'Healer',
     boosted = false,
     shard?: string
-  ): Promise<Http.ScreepsUnknownResponse> {
+  ): Promise<Http.GameCreateInvaderResponse | Http.ScreepsErrorResponse> {
     shard ??= this.appConfig.defaultShard
     if (this.isOfficialServer && shard === undefined) {
       throw new Error('shard must be defined')
@@ -931,6 +942,9 @@ export class ScreepsHttpClient extends EventEmitter {
    *  Defaults to {@link ScreepsClientConfig.defaultShard} if undefined.
    * @throws {@link node!Error | Error} if shard and {@link ScreepsClientConfig.defaultShard} are undefined
    *  while using an official server
+   * @returns an {@link Http.ScreepsResponse} on success, or an
+   *  {@link Http.ScreepsErrorResponse} (`{ error: 'invalid object' }`)
+   *  if the invader is missing or was not created by this user.
    * @category Endpoints: /game
    */
   gameRemoveInvader(_id: string, shard?: string): Promise<Http.ScreepsResponse | Http.ScreepsErrorResponse> {
@@ -1307,9 +1321,12 @@ export class ScreepsHttpClient extends EventEmitter {
    * to pick a new spawn room.
    *
    * Endpoint: `POST /api/user/respawn`
+   * @returns a {@link Http.ScreepsDbUpdateResponse} on success, or an
+   *  {@link Http.ScreepsErrorResponse} (`{ error: 'invalid status' }`)
+   *  if the user's world status is not `'normal'` or `'lost'`.
    * @category Endpoints: /user
    */
-  userRespawn(): Promise<Http.ScreepsUnknownResponse> {
+  userRespawn(): Promise<Http.ScreepsDbUpdateResponse | Http.ScreepsErrorResponse> {
     return this.req(ScreepsHttpMethods.Post, '/api/user/respawn')
   }
 
