@@ -38,16 +38,34 @@ describe('api.raw.user', function () {
     })
   })
 
-  describe('.userCloneBranch(branch, newName, defaultModules)', function () {
+  describe('.userCloneBranch(branch, newName)', function () {
     it('should send a request to /api/user/clone-branch in order to clone @branch into @newName', async function () {
       const api = await createAuthedClient()
       // Create a new branch
-      const cloneRes = await api.userCloneBranch('default', 'screeps-api-testing', undefined)
+      const cloneRes = await api.userCloneBranch('default', 'screeps-api-testing')
       assert.equal(cloneRes.ok, 1, 'incorrect server response: ok should be 1')
       // Check if branch was indeed created
       const branches = await api.userBranches()
       const found = _.find(branches.list, { branch: 'screeps-api-testing' })
       assert(found != null, 'branch was not cloned')
+    })
+  })
+
+  describe('.userCloneBranch(newName, defaultModules)', function () {
+    it('should send a request to /api/user/clone-branch in order to create @newName from @defaultModules', async function () {
+      const api = await createAuthedClient()
+      const defaultModules = { main: 'module.exports.loop = function () { /* screeps-api-seeded */ }' }
+      // Create a new branch from modules
+      const cloneRes = await api.userCloneBranch('screeps-api-seeded', defaultModules)
+      assert.equal(cloneRes.ok, 1, 'incorrect server response: ok should be 1')
+      // Check if branch was indeed created with the seeded modules
+      const branches = await api.userBranches()
+      const found = _.find(branches.list, { branch: 'screeps-api-seeded' })
+      assert(found != null, 'branch was not created')
+      const code = await api.userCodeGet('screeps-api-seeded')
+      assert.equal(code.modules.main, defaultModules.main, 'modules were not seeded')
+      // Clean up
+      await api.userDeleteBranch('screeps-api-seeded')
     })
   })
 

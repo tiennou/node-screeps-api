@@ -77,6 +77,16 @@ export interface UserBranchesResponse extends ScreepsResponse {
 }
 
 /**
+ * `POST /api/user/clone-branch` response
+ * @see {@link ScreepsHttpClient.userCloneBranch}
+ * @category HTTP API - User
+ */
+export interface UserCloneBranchResponse extends ScreepsResponse {
+  /** UNIX timestamp (in milliseconds) of the clone */
+  timestamp: number
+}
+
+/**
  * `GET /api/user/code` response
  * @see {@link ScreepsHttpClient.userCodeGet}
  * @category HTTP API - User

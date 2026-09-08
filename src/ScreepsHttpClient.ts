@@ -1321,21 +1321,44 @@ export class ScreepsHttpClient extends EventEmitter {
   }
 
   /**
-   * Create a copy of a code branch.
+   * Create a copy of an existing code branch.
+   *
+   * If a branch named `newName` already exists, its modules are overwritten.
    *
    * Endpoint: `POST /api/user/clone-branch`
    * @param branch The name of the code branch to clone
    * @param newName The name of the new code branch
-   * @param defaultModules Do you know what this does? If so, please submit a PR!
    * @see {@link userBranches} to list available branches
    * @category Endpoints: /user
    */
+  userCloneBranch(branch: string, newName: string): Promise<Http.UserCloneBranchResponse>
+  /**
+   * Create a new code branch seeded from modules.
+   *
+   * If `defaultModules` is omitted, the branch is created with `{ main: '' }`.
+   * If a branch named `newName` already exists, its modules are overwritten.
+   *
+   * Endpoint: `POST /api/user/clone-branch`
+   * @param newName The name of the new code branch
+   * @param defaultModules Initial {@link UserCodeModules} used to seed the new branch
+   * @see {@link userBranches} to list available branches
+   * @category Endpoints: /user
+   */
+  userCloneBranch(newName: string, defaultModules?: UserCodeModules): Promise<Http.UserCloneBranchResponse>
   userCloneBranch(
-    branch: string,
-    newName: string,
-    defaultModules: unknown
-  ): Promise<Http.ScreepsUnknownResponse> {
-    return this.req(ScreepsHttpMethods.Post, '/api/user/clone-branch', { branch, newName, defaultModules })
+    branchOrNewName: string,
+    newNameOrModules?: string | UserCodeModules
+  ): Promise<Http.UserCloneBranchResponse> {
+    if (typeof newNameOrModules === 'string') {
+      return this.req(ScreepsHttpMethods.Post, '/api/user/clone-branch', {
+        branch: branchOrNewName,
+        newName: newNameOrModules
+      })
+    }
+    return this.req(ScreepsHttpMethods.Post, '/api/user/clone-branch', {
+      newName: branchOrNewName,
+      defaultModules: newNameOrModules
+    })
   }
 
   /**
