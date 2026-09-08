@@ -49,6 +49,36 @@ describe('api.raw.user', function () {
       const found = _.find(branches.list, { branch: 'screeps-api-testing' })
       assert(found != null, 'branch was not cloned')
     })
+
+    it('should return { error: \'invalid branch name\' } if the source branch name is too long', async function () {
+      const api = await createAuthedClient()
+      const res = await api.userCloneBranch('x'.repeat(31), 'screeps-api-too-long')
+      assert.equal('error' in res ? res.error : undefined, 'invalid branch name', 'incorrect server response')
+      const branches = await api.userBranches()
+      assert(_.find(branches.list, { branch: 'screeps-api-too-long' }) == null, 'branch should not have been created')
+    })
+
+    it('should return { error: \'too many branches\' } if the user already has 30 branches', async function () {
+      this.timeout(30_000)
+      const api = await createAuthedClient()
+      const existing = await api.userBranches()
+      const created: string[] = []
+      try {
+        const toCreate = Math.max(0, 30 - existing.list.length)
+        for (let i = 0; i < toCreate; i++) {
+          const name = `screeps-api-cap-${i}`
+          const cloneRes = await api.userCloneBranch(name, { main: '' })
+          assert.equal(cloneRes.ok, 1, `failed to create ${name}`)
+          created.push(name)
+        }
+        const res = await api.userCloneBranch('screeps-api-cap-overflow', { main: '' })
+        assert.equal('error' in res ? res.error : undefined, 'too many branches', 'incorrect server response')
+      } finally {
+        for (const name of created) {
+          await api.userDeleteBranch(name)
+        }
+      }
+    })
   })
 
   describe('.userCloneBranch(newName, defaultModules)', function () {
@@ -86,6 +116,18 @@ describe('api.raw.user', function () {
       // Reset branch back to initial state
       await api.userSetActiveBranch(initialBranch.branch, 'activeSim')
     })
+
+    it('should return { error: \'no branch\' } if the named branch does not exist', async function () {
+      const api = await createAuthedClient()
+      const res = await api.userSetActiveBranch('screeps-api-missing-branch', 'activeSim')
+      assert.equal('error' in res ? res.error : undefined, 'no branch', 'incorrect server response')
+    })
+
+    it('should return { error: \'invalid params\' } if activeName is not activeWorld or activeSim', async function () {
+      const api = await createAuthedClient()
+      const res = await api.userSetActiveBranch('default', 'nope' as 'activeSim')
+      assert.equal('error' in res ? res.error : undefined, 'invalid params', 'incorrect server response')
+    })
   })
 
   describe('.userDeleteBranch(branch)', function () {
@@ -98,6 +140,22 @@ describe('api.raw.user', function () {
       const branches = await api.userBranches()
       const found = _.find(branches.list, { branch: 'screeps-api-testing' })
       assert(found == null, 'branch was not deleted')
+    })
+
+    it('should succeed when the named branch does not exist', async function () {
+      const api = await createAuthedClient()
+      const res = await api.userDeleteBranch('screeps-api-missing-branch')
+      assert.equal(res.ok, 1, 'incorrect server response: ok should be 1')
+    })
+
+    it('should succeed without deleting a currently active branch', async function () {
+      const api = await createAuthedClient()
+      const res = await api.userDeleteBranch('default')
+      assert.equal(res.ok, 1, 'incorrect server response: ok should be 1')
+      const branches = await api.userBranches()
+      const found = _.find(branches.list, { branch: 'default' })
+      assert(found != null, 'active branch should not have been deleted')
+      assert(found.activeWorld || found.activeSim, 'default should still be active')
     })
   })
 
@@ -130,6 +188,42 @@ describe('api.raw.user', function () {
       assert(_.has(res, 'modules'), 'response has no modules field')
       assert(_.has(res, 'branch'), 'response has no branch field')
       assert.equal(res.branch, 'default', 'branch is incorrect')
+    })
+  })
+
+  describe('.userCodeSet(params)', function () {
+    it('should send a POST request to /api/user/code and upload modules to the specified branch', async function () {
+      const api = await createAuthedClient()
+      const branch = 'screeps-api-code-set'
+      const modules = { main: 'module.exports.loop = function () { /* screeps-api-code-set */ }' }
+      await api.userCloneBranch(branch, { main: '' })
+      try {
+        const res = await api.userCodeSet({ branch, modules })
+        assert.equal(res.ok, 1, 'incorrect server response: ok should be 1')
+        const code = await api.userCodeGet(branch)
+        assert.equal(code.modules.main, modules.main, 'modules were not uploaded')
+      } finally {
+        await api.userDeleteBranch(branch)
+      }
+    })
+
+    it('should return { error: \'branch does not exist\' } if the named branch is missing', async function () {
+      const api = await createAuthedClient()
+      const res = await api.userCodeSet({
+        branch: 'screeps-api-missing-code',
+        modules: { main: 'module.exports.loop = function () {}' }
+      })
+      assert.equal('error' in res ? res.error : undefined, 'branch does not exist', 'incorrect server response')
+    })
+
+    it('should return { error: \'code length exceeds 5 MB limit\' } if modules are too large', async function () {
+      this.timeout(15_000)
+      const api = await createAuthedClient()
+      const res = await api.userCodeSet({
+        branch: 'default',
+        modules: { main: 'x'.repeat(5 * 1024 * 1024) }
+      })
+      assert.equal('error' in res ? res.error : undefined, 'code length exceeds 5 MB limit', 'incorrect server response')
     })
   })
 })

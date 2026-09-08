@@ -1321,10 +1321,15 @@ export class ScreepsHttpClient extends EventEmitter {
    * @param activeName The environment for which this code branch should be activated:
    *  - 'activeWorld': activate branch on the server
    *  - 'activeSim': activate branch on the simulator
+   * @returns an {@link Http.ScreepsResponse} on success, or an
+   *  {@link Http.ScreepsErrorResponse}:
+   *  `{ error: 'no branch' }` if the named branch does not exist, or
+   *  `{ error: 'invalid params' }` if `activeName` is not `'activeWorld'`
+   *  or `'activeSim'`.
    * @see {@link userBranches} to list available branches
    * @category Endpoints: /user
    */
-  userSetActiveBranch(branch: string, activeName: 'activeWorld' | 'activeSim'): Promise<Http.ScreepsUnknownResponse> {
+  userSetActiveBranch(branch: string, activeName: 'activeWorld' | 'activeSim'): Promise<Http.ScreepsResponse | Http.ScreepsErrorResponse> {
     return this.req(ScreepsHttpMethods.Post, '/api/user/set-active-branch', { branch, activeName })
   }
 
@@ -1336,10 +1341,16 @@ export class ScreepsHttpClient extends EventEmitter {
    * Endpoint: `POST /api/user/clone-branch`
    * @param branch The name of the code branch to clone
    * @param newName The name of the new code branch
+   * @returns a {@link Http.UserCodeTimestampResponse} on success, or an
+   *  {@link Http.ScreepsErrorResponse}:
+   *  `{ error: 'invalid branch name' }` if `branch` is not a string or is
+   *  longer than 30 characters, or
+   *  `{ error: 'too many branches' }` if creating a new branch would exceed
+   *  the 30-branch limit.
    * @see {@link userBranches} to list available branches
    * @category Endpoints: /user
    */
-  userCloneBranch(branch: string, newName: string): Promise<Http.UserCloneBranchResponse>
+  userCloneBranch(branch: string, newName: string): Promise<Http.UserCodeTimestampResponse | Http.ScreepsErrorResponse>
   /**
    * Create a new code branch seeded from modules.
    *
@@ -1349,14 +1360,17 @@ export class ScreepsHttpClient extends EventEmitter {
    * Endpoint: `POST /api/user/clone-branch`
    * @param newName The name of the new code branch
    * @param defaultModules Initial {@link UserCodeModules} used to seed the new branch
+   * @returns a {@link Http.UserCodeTimestampResponse} on success, or an
+   *  {@link Http.ScreepsErrorResponse} (`{ error: 'too many branches' }`)
+   *  if creating a new branch would exceed the 30-branch limit.
    * @see {@link userBranches} to list available branches
    * @category Endpoints: /user
    */
-  userCloneBranch(newName: string, defaultModules?: UserCodeModules): Promise<Http.UserCloneBranchResponse>
+  userCloneBranch(newName: string, defaultModules?: UserCodeModules): Promise<Http.UserCodeTimestampResponse | Http.ScreepsErrorResponse>
   userCloneBranch(
     branchOrNewName: string,
     newNameOrModules?: string | UserCodeModules
-  ): Promise<Http.UserCloneBranchResponse> {
+  ): Promise<Http.UserCodeTimestampResponse | Http.ScreepsErrorResponse> {
     if (typeof newNameOrModules === 'string') {
       return this.req(ScreepsHttpMethods.Post, '/api/user/clone-branch', {
         branch: branchOrNewName,
@@ -1372,11 +1386,14 @@ export class ScreepsHttpClient extends EventEmitter {
   /**
    * Delete a code branch.
    *
+   * Missing branches and currently active branches are ignored; the response
+   * is still a success in those cases.
+   *
    * Endpoint: `POST /api/user/delete-branch`
    * @param branch The name of the code branch to delete
    * @category Endpoints: /user
    */
-  userDeleteBranch(branch: string): Promise<Http.ScreepsUnknownResponse> {
+  userDeleteBranch(branch: string): Promise<Http.UserCodeTimestampResponse> {
     return this.req(ScreepsHttpMethods.Post, '/api/user/delete-branch', { branch })
   }
 
@@ -1469,10 +1486,15 @@ export class ScreepsHttpClient extends EventEmitter {
    * @param params the code/binaries and target branch
    * @param params.branch the name of the branch for which to upload code
    * @param params.modules JavScript code and WASM binaries to upload keyed by module name
+   * @returns a {@link Http.UserCodeTimestampResponse} on success, or an
+   *  {@link Http.ScreepsErrorResponse}:
+   *  `{ error: 'branch does not exist' }` if the named branch is missing, or
+   *  `{ error: 'code length exceeds 5 MB limit' }` if `modules` is larger
+   *  than 5 MB.
    * @see https://docs.screeps.com/commit.html
    * @category Endpoints: /user/code
    */
-  userCodeSet(params: Http.UserCodeSetRequest): Promise<Http.ScreepsUnknownResponse> {
+  userCodeSet(params: Http.UserCodeSetRequest): Promise<Http.UserCodeTimestampResponse | Http.ScreepsErrorResponse> {
     return this.req(ScreepsHttpMethods.Post, '/api/user/code', params)
   }
 
