@@ -933,7 +933,7 @@ export class ScreepsHttpClient extends EventEmitter {
    *  while using an official server
    * @category Endpoints: /game
    */
-  gameRemoveInvader(_id: string, shard?: string): Promise<Http.ScreepsUnknownResponse> {
+  gameRemoveInvader(_id: string, shard?: string): Promise<Http.ScreepsResponse | Http.ScreepsErrorResponse> {
     shard ??= this.appConfig.defaultShard
     if (this.isOfficialServer && shard === undefined) {
       throw new Error('shard must be defined')
@@ -1503,9 +1503,12 @@ export class ScreepsHttpClient extends EventEmitter {
    *
    * Endpoint: `POST /api/user/decorations/convert`
    * @param decorations The IDs of one or more owned decorations
+   * @returns an {@link Http.ScreepsResponse} on success, or an
+   *  {@link Http.ScreepsErrorResponse} (`{ error: 'Invalid ID' }`)
+   *  if a specified decoration is missing.
    * @category Endpoints: /user/decorations
    */
-  userDecorationsConvert(decorations: string[]): Promise<Http.ScreepsUnknownResponse> {
+  userDecorationsConvert(decorations: string[]): Promise<Http.ScreepsResponse | Http.ScreepsErrorResponse> {
     return this.req(ScreepsHttpMethods.Post, '/api/user/decorations/convert', { decorations })
   }
 
@@ -1515,12 +1518,18 @@ export class ScreepsHttpClient extends EventEmitter {
    *
    * Endpoint: `POST /api/user/decorations/pixelize`
    * @param count The number of decorations to generate.
-   * @param theme The theme from which to generate decorations.
-   *  Note that specifying a theme increases the pixelization cost.
-   *  Set to an empty string to create decorations from any theme.
+   *  The official client caps this at 24.
+   * @param theme An ID from {@link userDecorationsThemes}, or an empty string
+   *  to pixelize from any theme. Specifying a theme increases the pixelization cost.
+   * @returns a {@link Http.UserDecorationPixelizeResponse} on success, or an
+   *  {@link Http.ScreepsErrorResponse}:
+   *  `{ error: 'Invalid request' }` if `count` is too high, or
+   *  `{ error: 'Error: Argument passed in must be a single String of 12 bytes or a string of 24 hex characters' }`
+   *   if `theme` is not empty and is not a valid theme ID.
+   *  `{ error: 'Invalid theme' }` if `theme` is unknown or restricted.
    * @category Endpoints: /user/decorations
    */
-  userDecorationsPixelize(count: number, theme = ''): Promise<Http.ScreepsUnknownResponse> {
+  userDecorationsPixelize(count: number, theme = ''): Promise<Http.UserDecorationPixelizeResponse | Http.ScreepsErrorResponse> {
     return this.req(ScreepsHttpMethods.Post, '/api/user/decorations/pixelize', { count, theme })
   }
 
@@ -1530,9 +1539,12 @@ export class ScreepsHttpClient extends EventEmitter {
    * Endpoint: `POST /api/user/decorations/activate`
    * @param _id the ID of the decoration to activate
    * @param active values to assign to configurable {@link Decoration.props | properties}
+   * @throws {@link ScreepsApiError} HTTP 400 if the decoration is already active
+   *  (`{ error: 'Decoration already activated' }`), or if it has been converted
+   *  or is missing (`{ error: 'Invalid ID' }`).
    * @category Endpoints: /user/decorations
    */
-  userDecorationsActivate(_id: string, active: object): Promise<Http.ScreepsUnknownResponse> {
+  userDecorationsActivate(_id: string, active: object): Promise<Http.ScreepsResponse> {
     return this.req(ScreepsHttpMethods.Post, '/api/user/decorations/activate', { _id, active })
   }
 
@@ -1541,9 +1553,12 @@ export class ScreepsHttpClient extends EventEmitter {
    *
    * Endpoint: `POST /api/user/decorations/deactivate`
    * @param decorations The IDs of one or more active decorations
+   * @returns an {@link Http.ScreepsResponse} on success, or an
+   *  {@link Http.ScreepsErrorResponse} (`{ error: 'Invalid ID' }`)
+   *  if a specified decoration has been converted or is missing.
    * @category Endpoints: /user/decorations
    */
-  userDecorationsDeactivate(decorations: string[]): Promise<Http.ScreepsUnknownResponse> {
+  userDecorationsDeactivate(decorations: string[]): Promise<Http.ScreepsResponse | Http.ScreepsErrorResponse> {
     return this.req(ScreepsHttpMethods.Post, '/api/user/decorations/deactivate', { decorations })
   }
 
